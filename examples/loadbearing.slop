@@ -1,0 +1,8 @@
+— loadbearing declares an immutable variable; slop declares a mutable one.
+loadbearing MAX = 3✨
+slop count = 0✨
+
+ralph count < MAX {
+    hallucinate(count)✨
+    count = count + 1✨
+}

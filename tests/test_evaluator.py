@@ -71,6 +71,28 @@ hallucinate(x)✨"""
     assert run(source) == "2\n"
 
 
+def test_loadbearing_binds_an_immutable_value():
+    assert run("loadbearing MAX = 3✨\nhallucinate(MAX)✨") == "3\n"
+
+
+def test_loadbearing_declaration_works_inside_a_block():
+    source = """{
+    loadbearing X = 1✨
+    hallucinate(X)✨
+}"""
+    assert run(source) == "1\n"
+
+
+def test_loadbearing_can_be_shadowed_in_an_inner_block():
+    source = """loadbearing x = 1✨
+{
+    slop x = 2✨
+    hallucinate(x)✨
+}
+hallucinate(x)✨"""
+    assert run(source) == "2\n1\n"
+
+
 def test_loop_body_is_a_fresh_scope_each_iteration():
     source = """slop i = 0✨
 ralph i < 3 {

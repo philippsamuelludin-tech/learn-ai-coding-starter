@@ -6,6 +6,14 @@ Files use the `.slop` extension and run with:
 uv run sloperator.py path/to/program.slop
 ```
 
+Check a file's syntax without executing it:
+
+```bash
+uv run sloperator.py --check path/to/program.slop
+```
+
+`--check` runs only the lexer and parser. It exits `0` when the file is valid, and `1` with the usual diagnostic otherwise. Runtime errors are not detected.
+
 ## Example
 
 ```slop
@@ -34,6 +42,7 @@ Prints `small slop` twice, then `big slop`.
 | SlopLang      | Conventional | Meaning                                                 |
 | ------------- | ------------ | ------------------------------------------------------- |
 | `slop`        | `let`        | Declare a mutable variable                              |
+| `loadbearing` | `const`      | Declare an immutable variable                           |
 | `clanker`     | `fn`         | Define a function                                       |
 | `vibe`        | `if`         | Conditional                                             |
 | `nah`         | `else`       | Else branch                                             |
@@ -70,16 +79,16 @@ No implicit conversions.
 
 ## Variables
 
-`slop` declares a mutable variable and requires an initializer. A scope cannot declare a name twice, but an inner block may shadow an outer name.
+`slop` declares a mutable variable and `loadbearing` declares an immutable one. Both require an initializer. A scope cannot declare a name twice, but an inner block may shadow an outer name.
 
 ```slop
 slop score = 10✨
-slop LIMIT = 100✨
+loadbearing LIMIT = 100✨
 score = score + 5✨
 score = score + 1✨
 ```
 
-Assignment is a statement, not an expression: `name = expression✨`. It updates the nearest existing `slop` variable. Reading or assigning an undefined name is a runtime error.
+Assignment is a statement, not an expression: `name = expression✨`. It updates the nearest existing mutable variable. Assigning to a `loadbearing` binding raises `cannot assign to loadbearing 'name'`; assigning to an undefined name is also a runtime error.
 
 Every brace block is a lexical scope. Assignment searches the current scope, then each enclosing scope.
 
@@ -114,7 +123,7 @@ hallucinate(add(20, 22))✨
 
 `ship` returns one value; reaching the end of the body returns `nil`. `ship` outside a function and duplicate parameter names are syntax errors.
 
-A `clanker` name is an immutable binding in the global scope: it cannot be redeclared or assigned, and it is a value, so `slop f = add✨` followed by `f(1, 2)✨` works. Calling a non-function is a runtime error. Functions must be declared before they are called; mutual recursion works when both are declared before the first call. No nested or anonymous functions.
+A `clanker` name is an immutable binding (like `loadbearing`) in the global scope: it cannot be redeclared or assigned, and it is a value, so `slop f = add✨` followed by `f(1, 2)✨` works. Calling a non-function is a runtime error. Functions must be declared before they are called; mutual recursion works when both are declared before the first call. No nested or anonymous functions.
 
 Call depth is capped at 500 nested calls. Exceeding it is a runtime error (`stack overflow`), never a Python traceback.
 
@@ -152,7 +161,7 @@ functionDecl   -> "clanker" IDENTIFIER "(" parameters? ")" block ;
 parameters     -> IDENTIFIER ( "," IDENTIFIER )* ;
 
 declaration    -> variableDecl | statement ;
-variableDecl   -> "slop" IDENTIFIER "=" expression "✨" ;
+variableDecl   -> ( "slop" | "loadbearing" ) IDENTIFIER "=" expression "✨" ;
 
 statement      -> assignStmt | ifStmt | loopStmt | returnStmt
                 | block | expressionStmt ;
@@ -185,6 +194,7 @@ The interpreter stops at the first lexical, syntax, or runtime error, writes the
 SlopLang lexical error at line 1: straight quotes are not supported, use “ and ” for strings
 SlopLang syntax error at line 2: expected ✨ after variable declaration, found 'slop'
 SlopLang runtime error at line 3: division by zero
+SlopLang runtime error at line 4: cannot assign to loadbearing 'MAX'
 ```
 
 ## Typing SlopLang

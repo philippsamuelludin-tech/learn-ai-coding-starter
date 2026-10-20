@@ -34,3 +34,51 @@ def test_missing_file_and_usage():
     missing = run_cli(str(ROOT / "nope.slop"))
     assert missing.returncode == 2
     assert "could not read" in missing.stderr
+
+
+def test_check_accepts_syntax_without_running(tmp_path: Path):
+    program = tmp_path / "ok.slop"
+    program.write_text("hallucinate(“hi”)✨\n", encoding="utf-8")
+    completed = run_cli("--check", str(program))
+    assert completed.returncode == 0
+    assert completed.stdout == ""
+    assert completed.stderr == ""
+
+
+def test_check_ignores_runtime_errors(tmp_path: Path):
+    program = tmp_path / "runtime.slop"
+    program.write_text("hallucinate(missing)✨\n", encoding="utf-8")
+    completed = run_cli("--check", str(program))
+    assert completed.returncode == 0
+    assert completed.stdout == ""
+    assert completed.stderr == ""
+
+
+def test_check_reports_syntax_errors(tmp_path: Path):
+    program = tmp_path / "bad.slop"
+    program.write_text("slop x = 1", encoding="utf-8")
+    completed = run_cli("--check", str(program))
+    assert completed.returncode == 1
+    assert completed.stdout == ""
+    assert completed.stderr == (
+        "SlopLang syntax error at line 1: expected ✨ after variable declaration, "
+        "but reached end of file\n"
+    )
+
+
+def test_check_reports_lexical_errors(tmp_path: Path):
+    program = tmp_path / "bad-string.slop"
+    program.write_text('hallucinate("hi")✨\n', encoding="utf-8")
+    completed = run_cli("--check", str(program))
+    assert completed.returncode == 1
+    assert completed.stdout == ""
+    assert completed.stderr == (
+        "SlopLang lexical error at line 1: straight quotes are not supported, "
+        "use “ and ” for strings\n"
+    )
+
+
+def test_check_requires_a_file():
+    completed = run_cli("--check")
+    assert completed.returncode == 2
+    assert "usage:" in completed.stderr
